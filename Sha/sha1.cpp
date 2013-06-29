@@ -72,7 +72,11 @@ void Sha1Class::addUncounted(uint8_t data) {
   }
 }
 
+#if ARDUINO >= 100
+size_t Sha1Class::write(uint8_t data) {
+#else
 void Sha1Class::write(uint8_t data) {
+#endif
   ++byteCount;
   addUncounted(data);
 }
@@ -129,6 +133,25 @@ void Sha1Class::initHmac(const uint8_t* key, int keyLength) {
   } else {
     // Block length keys are used as is
     memcpy(keyBuffer,key,keyLength);
+  }
+  // Start inner hash
+  init();
+  for (i=0; i<BLOCK_LENGTH; i++) {
+    write(keyBuffer[i] ^ HMAC_IPAD);
+  }
+}
+
+void Sha1Class::initHmac_P(const uint8_t* key, int keyLength) {
+  uint8_t i;
+  memset(keyBuffer,0,BLOCK_LENGTH);
+  if (keyLength > BLOCK_LENGTH) {
+    // Hash long keys
+    init();
+    for (;keyLength--;) write(pgm_read_byte(key++));
+    memcpy(keyBuffer,result(),HASH_LENGTH);
+  } else {
+    // Block length keys are used as is
+    memcpy_P(keyBuffer,key,keyLength);
   }
   // Start inner hash
   init();
